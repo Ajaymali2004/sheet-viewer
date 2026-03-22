@@ -17,7 +17,7 @@ export function useSheetData(editUrl: string): UseSheetDataResult {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If no URL, do nothing — reset state cleanly
+    
     if (!editUrl || editUrl.trim() === "") {
       setData({ columns: [], rows: [] });
       setError(null);
@@ -33,7 +33,7 @@ export function useSheetData(editUrl: string): UseSheetDataResult {
       return;
     }
 
-    // Reset before fetching
+    
     setLoading(true);
     setError(null);
     setData({ columns: [], rows: [] });

@@ -13,14 +13,16 @@ interface SheetTableProps {
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 40, 50, 100];
-const DUMMY_IMAGE = "https://lh3.googleusercontent.com/d/152ATCZC2c6maKu1uSriSF4laC4IiFNDm";
+
+
+const DUMMY_IMAGE = "https://lh3.googleusercontent.com/d/1VJq6sF5xcQNOMSFBfLSRPhFQkep4gyLA";
 
 export default function SheetTable({ columns, rows, columnTypes, filters, onFilterChange }: SheetTableProps) {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [openFilters, setOpenFilters] = useState<Set<string>>(new Set());
 
-  // Reset to page 1 when rows or pageSize changes
+  
   useEffect(() => {
     setCurrentPage(1);
   }, [rows, pageSize]);
@@ -156,7 +158,7 @@ export default function SheetTable({ columns, rows, columnTypes, filters, onFilt
 
                   if (type === "image") {
                     if (!value || value.trim() === "") {
-                      // Empty cell → dummy image
+                      
                       return (
                         <td key={`${col}-${colIndex}`} className="px-4 py-2">
                           <img
@@ -175,7 +177,7 @@ export default function SheetTable({ columns, rows, columnTypes, filters, onFilt
                           alt={col}
                           className="h-14 w-14 object-cover rounded-lg border border-gray-700"
                           onError={(e) => {
-                            // Image failed to load → show the raw value as text instead
+                            
                             const td = (e.target as HTMLImageElement).parentElement;
                             if (td) {
                               td.innerHTML = `<span class="text-gray-300 text-xs break-all" style="max-width:180px;display:block">${value}</span>`;

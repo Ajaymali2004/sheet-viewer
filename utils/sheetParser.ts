@@ -9,7 +9,7 @@ export function parseCSV(csv: string): SheetData {
 
   const headerRow = lines[0].split(",");
 
-  // Stop at first empty header cell → dynamic column detection
+  
   const columns: string[] = [];
   for (const cell of headerRow) {
     const trimmed = cell.trim().replace(/^"|"$/g, "");
