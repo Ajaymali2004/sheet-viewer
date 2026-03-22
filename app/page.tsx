@@ -6,30 +6,38 @@ import { detectColumnType } from "@/utils/columnType";
 import SheetTable from "@/components/SheetTable";
 import StatusMessage from "@/components/StatusMessage";
 
-const STORAGE_KEY = "sheetflow_url";
-
-function isValidSheetUrl(url: string): boolean {
-  const trimmed = url.trim();
-  console.log("Checking URL:", trimmed);
-  console.log("Includes spreadsheets:", trimmed.includes("docs.google.com/spreadsheets/d/"));
-  return trimmed.includes("docs.google.com/spreadsheets/d/");
-}
+const CONFIG_SHEET_URL = "https://docs.google.com/spreadsheets/d/1CiMgzPxZLg5rAC794IfxOqp_pNnKMs6AYwdrmwWhuJw/edit?gid=0#gid=0";
 
 export default function Home() {
   const [sheetUrl, setSheetUrl] = useState<string>("");
-  const [inputValue, setInputValue] = useState<string>("");
-  const [inputError, setInputError] = useState<string | null>(null);
-  const [showInput, setShowInput] = useState<boolean>(false);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
 
-  // On mount, load from localStorage
+  // On mount, fetch the config sheet and extract the target URL
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setSheetUrl(stored);
-      setInputValue(stored);
-    } else {
-      setShowInput(true); // No URL stored → show input by default
-    }
+    const csvUrl = CONFIG_SHEET_URL
+      .replace(/\/edit.*$/, "/export?format=csv&gid=0");
+
+    fetch(csvUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch config sheet");
+        return res.text();
+      })
+      .then((csv) => {
+        // Grab the first non-empty cell value from the sheet (skip header row)
+        const lines = csv.split("\n").filter(Boolean);
+        // Try row index 1 (second row) first, then row 0 if only one row
+        const targetLine = lines[1] ?? lines[0];
+        if (!targetLine) throw new Error("Config sheet is empty");
+
+        const firstCell = targetLine.split(",")[0].trim().replace(/^"|"$/g, "");
+        if (!firstCell || !firstCell.includes("docs.google.com/spreadsheets")) {
+          throw new Error("No valid sheet URL found in config sheet");
+        }
+        setSheetUrl(firstCell);
+      })
+      .catch((err) => setConfigError(err.message))
+      .finally(() => setConfigLoading(false));
   }, []);
 
   const { columns, rows, error, loading } = useSheetData(sheetUrl);
@@ -41,8 +49,6 @@ export default function Home() {
     });
     return types;
   }, [columns, rows]);
-
-  const filteredRows = useMemo(() => rows, [rows]);
 
   const [filters, setFilters] = useState<Record<string, { text?: string; min?: string; max?: string }>>({});
 
@@ -68,35 +74,12 @@ export default function Home() {
     setFilters((prev) => ({ ...prev, [col]: value }));
   };
 
-  const handleSubmit = () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed) {
-      setInputError("Please enter a URL");
-      return;
-    }
-    if (!isValidSheetUrl(trimmed)) {
-      setInputError("Given URL is not a valid Google Sheet URL");
-      return;
-    }
-    setInputError(null);
-    localStorage.setItem(STORAGE_KEY, trimmed);
-    setSheetUrl(trimmed);
-    setFilters({});
-    setShowInput(false);
-  };
-
-  const handleClear = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setSheetUrl("");
-    setInputValue("");
-    setInputError(null);
-    setFilters({});
-    setShowInput(true);
-  };
-
   const activeFilterCount = Object.values(filters).filter(
     (f) => f && (f.text || f.min || f.max)
   ).length;
+
+  const isLoading = configLoading || loading;
+  const errorMsg = configError || error;
 
   return (
     <main className="min-h-screen bg-gray-950 text-white px-6 py-8 relative">
@@ -108,82 +91,13 @@ export default function Home() {
         </h1>
       </div>
 
-      {/* URL Input Section */}
-      {showInput ? (
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 flex flex-col gap-4">
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Google Sheet URL</label>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  setInputError(null);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                placeholder="https://docs.google.com/spreadsheets/d/..."
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-600"
-              />
-              {inputError && (
-                <p className="text-red-400 text-xs mt-1.5">⚠ {inputError}</p>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleSubmit}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
-                Load Sheet
-              </button>
-              {sheetUrl && (
-                <button
-                  onClick={() => setShowInput(false)}
-                  className="px-5 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Collapsed URL bar — always visible when data is loaded */
-        <div className="max-w-2xl mx-auto mb-6 flex items-center gap-3">
-          <div className="flex-1 px-4 py-2 bg-gray-900 border border-gray-700 rounded-xl text-gray-400 text-xs truncate">
-            {sheetUrl}
-          </div>
-          <button
-            onClick={() => setShowInput(true)}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-xs rounded-xl transition-colors whitespace-nowrap"
-          >
-            ✎ Change URL
-          </button>
-          <button
-            onClick={handleClear}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-400 text-xs rounded-xl transition-colors"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* No URL state */}
-      {!sheetUrl && !showInput && (
-        <div className="text-center text-gray-500 mt-20">
-          <p className="text-4xl mb-4">📋</p>
-          <p className="text-lg">No sheet loaded yet</p>
-          <p className="text-sm mt-1">Enter a Google Sheet URL above to get started</p>
-        </div>
-      )}
-
       {/* Loading / Error */}
-      {sheetUrl && (loading || error) && (
-        <StatusMessage loading={loading} error={error} />
+      {(isLoading || errorMsg) && (
+        <StatusMessage loading={isLoading} error={errorMsg} />
       )}
 
       {/* Main Content */}
-      {sheetUrl && !loading && !error && (
+      {!isLoading && !errorMsg && (
         <>
           {/* Stats */}
           <div className="flex gap-4 mb-6 justify-center flex-wrap">

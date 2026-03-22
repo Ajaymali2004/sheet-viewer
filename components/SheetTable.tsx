@@ -91,11 +91,10 @@ export default function SheetTable({ columns, rows, columnTypes, filters, onFilt
                       {type !== "image" && (
                         <button
                           onClick={() => toggleFilter(col)}
-                          className={`text-xs px-1 py-0.5 rounded border transition-all ${
-                            active
+                          className={`text-xs px-1 py-0.5 rounded border transition-all ${active
                               ? "border-blue-500 text-blue-400 bg-blue-500/10"
                               : "border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-300"
-                          }`}
+                            }`}
                         >
                           {active ? "●" : "⌄"}
                         </button>
@@ -156,14 +155,32 @@ export default function SheetTable({ columns, rows, columnTypes, filters, onFilt
                   const value = row[col];
 
                   if (type === "image") {
-                    const imgSrc = value && value.trim() !== "" ? toDirectImageUrl(value) : DUMMY_IMAGE;
+                    if (!value || value.trim() === "") {
+                      // Empty cell → dummy image
+                      return (
+                        <td key={`${col}-${colIndex}`} className="px-4 py-2">
+                          <img
+                            src={DUMMY_IMAGE}
+                            alt={col}
+                            className="h-14 w-14 object-cover rounded-lg border border-gray-700"
+                          />
+                        </td>
+                      );
+                    }
+
                     return (
                       <td key={`${col}-${colIndex}`} className="px-4 py-2">
                         <img
-                          src={imgSrc}
+                          src={toDirectImageUrl(value)}
                           alt={col}
                           className="h-14 w-14 object-cover rounded-lg border border-gray-700"
-                          onError={(e) => { (e.target as HTMLImageElement).src = DUMMY_IMAGE; }}
+                          onError={(e) => {
+                            // Image failed to load → show the raw value as text instead
+                            const td = (e.target as HTMLImageElement).parentElement;
+                            if (td) {
+                              td.innerHTML = `<span class="text-gray-300 text-xs break-all" style="max-width:180px;display:block">${value}</span>`;
+                            }
+                          }}
                         />
                       </td>
                     );
@@ -246,11 +263,10 @@ export default function SheetTable({ columns, rows, columnTypes, filters, onFilt
                     <button
                       key={p}
                       onClick={() => setCurrentPage(p as number)}
-                      className={`px-3 py-1 rounded-lg text-xs border transition-colors ${
-                        currentPage === p
+                      className={`px-3 py-1 rounded-lg text-xs border transition-colors ${currentPage === p
                           ? "bg-blue-600 border-blue-500 text-white"
                           : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>
