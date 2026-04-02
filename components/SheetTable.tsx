@@ -165,6 +165,8 @@ export default function SheetTable({ columns, rows, columnTypes, filters, onFilt
                             src={DUMMY_IMAGE}
                             alt={col}
                             className="h-14 w-14 object-cover rounded-lg border border-gray-700"
+                            crossOrigin="anonymous"
+                            referrerPolicy="no-referrer"
                           />
                         </td>
                       );
@@ -176,6 +178,8 @@ export default function SheetTable({ columns, rows, columnTypes, filters, onFilt
                           src={toDirectImageUrl(value)}
                           alt={col}
                           className="h-14 w-14 object-cover rounded-lg border border-gray-700"
+                          crossOrigin="anonymous"
+                          referrerPolicy="no-referrer"
                           onError={(e) => {
                             
                             const td = (e.target as HTMLImageElement).parentElement;
